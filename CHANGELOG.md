@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [4.4.2] — 2026-10-20
+
+- Hermes turn timing is accumulated in memory and written once per turn by a background thread, instead of one full-ledger read/fold/fsync per phase change on the turn's thread (about 9 s per tool step on a 64 MB ledger). Provider close drains pending writes; `flush_timing(timeout)` waits for them.
+
 ## [4.4.1] — 2026-10-20
 
 - Hermes recall skips injected ReasoningBank lessons scoring below 0.03 (`MEMKRAFT_HERMES_LESSON_MIN_SCORE`, `0` restores the old behaviour). `development_inject_for_task()` accepts `min_score`; its library default stays 0.0.
