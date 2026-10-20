@@ -177,6 +177,16 @@ class MemKraftMemoryProvider(MemoryProvider):
         self._session_id = ""
         self._installation_report: Optional[Dict[str, object]] = None
         self._timing_turns: Dict[int, Dict[str, Any]] = {}
+        # Each delay-ledger write re-reads and folds the whole ledger (0.5 s at
+        # 38k records, 2 s at 138k).  Hermes reports a phase change before and
+        # after every model call, so writing per transition cost seconds per
+        # tool step.  Phases are accumulated in memory and the turn is written
+        # once, off the turn's thread, when it finishes.
+        self._timing_lock = threading.Lock()
+        self._timing_pending: List[Dict[str, Any]] = []
+        self._timing_idle = threading.Event()
+        self._timing_idle.set()
+        self._timing_worker: Optional[threading.Thread] = None
 
     @property
     def name(self) -> str:
@@ -257,78 +267,110 @@ class MemKraftMemoryProvider(MemoryProvider):
         seed = "{}:{}:{}".format(session_id, turn_number, time.time_ns()).encode("utf-8")
         return "hermes-{}".format(hashlib.sha256(seed).hexdigest()[:24])
 
-    def _start_phase(self, state: Dict[str, Any], phase: str, iteration: int = 0) -> None:
-        if self._store is None:
-            return
-        state["phase_seq"] += 1
-        phase_id = "{}-p{:03d}".format(state["run_id"], state["phase_seq"])
-        getattr(self._store, "delay_run_start")(
-            phase_id,
-            "phase",
-            "{}.{}".format(state["cohort"], phase),
-            now=_utc_now(),
-            parent_run_id=state["run_id"],
-            context_refs=("iteration:{}".format(max(0, int(iteration))),),
-        )
-        state.update(
-            phase=phase,
-            phase_id=phase_id,
-            phase_started_monotonic=time.monotonic(),
-        )
-
-    def _finish_phase(self, state: Dict[str, Any], outcome: str = "completed") -> None:
-        if self._store is None or not state.get("phase_id"):
+    @staticmethod
+    def _close_phase(state: Dict[str, Any]) -> None:
+        """Fold the open phase into the per-phase totals (memory only)."""
+        phase = state.get("phase")
+        if not phase:
             return
         elapsed_ms = max(0, int((time.monotonic() - state["phase_started_monotonic"]) * 1000))
-        getattr(self._store, "delay_run_finish")(
-            state["phase_id"], elapsed_ms, now=_utc_now(), outcome=outcome
+        totals = state["phase_ms"]
+        totals[phase] = totals.get(phase, 0) + elapsed_ms
+        state.update(phase=None, phase_started_monotonic=None)
+
+    def _write_turn(self, job: Dict[str, Any]) -> None:
+        store = self._store
+        if store is None:
+            return
+        run_id = job["run_id"]
+        store.delay_run_start(run_id, "task", job["cohort"], now=job["started_at"])
+        for seq, (phase, elapsed_ms) in enumerate(sorted(job["phase_ms"].items()), 1):
+            phase_id = "{}-p{:03d}".format(run_id, seq)
+            store.delay_run_start(
+                phase_id,
+                "phase",
+                "{}.{}".format(job["cohort"], phase),
+                now=job["started_at"],
+                parent_run_id=run_id,
+            )
+            store.delay_run_finish(
+                phase_id, elapsed_ms, now=job["finished_at"], outcome=job["phase_outcome"]
+            )
+        store.delay_run_finish(
+            run_id, job["elapsed_ms"], now=job["finished_at"], outcome=job["outcome"]
         )
-        state.update(phase=None, phase_id=None, phase_started_monotonic=None)
+
+    def _timing_loop(self) -> None:
+        while True:
+            with self._timing_lock:
+                if not self._timing_pending:
+                    self._timing_worker = None
+                    self._timing_idle.set()
+                    return
+                job = self._timing_pending.pop(0)
+            try:
+                self._write_turn(job)
+            except Exception:
+                logging.getLogger(__name__).warning(
+                    "MemKraft timing write failed for one turn", exc_info=True
+                )
+
+    def _enqueue_turn(self, job: Dict[str, Any]) -> None:
+        with self._timing_lock:
+            self._timing_pending.append(job)
+            self._timing_idle.clear()
+            if self._timing_worker is None:
+                worker = threading.Thread(
+                    target=self._timing_loop, name="memkraft-timing", daemon=True
+                )
+                self._timing_worker = worker
+                worker.start()
+
+    def flush_timing(self, timeout: Optional[float] = None) -> bool:
+        """Wait until finished turns are on disk; True when nothing is pending."""
+        return self._timing_idle.wait(timeout)
 
     def on_turn_timing_start(self, turn_number: int, **kwargs: Any) -> None:
-        """Open a privacy-safe task and initial active phase."""
+        """Open a privacy-safe task and initial active phase (memory only)."""
         if self._store is None or turn_number in self._timing_turns:
             return
         session_id = str(kwargs.get("session_id") or self._session_id or "unknown")
-        cohort = _cohort(kwargs.get("platform"), kwargs.get("subject"))
-        run_id = self._run_id(session_id, turn_number)
-        getattr(self._store, "delay_run_start")(run_id, "task", cohort, now=_utc_now())
-        state: Dict[str, Any] = {
-            "run_id": run_id,
-            "cohort": cohort,
+        self._timing_turns[turn_number] = {
+            "run_id": self._run_id(session_id, turn_number),
+            "cohort": _cohort(kwargs.get("platform"), kwargs.get("subject")),
+            "started_at": _utc_now(),
             "started_monotonic": time.monotonic(),
-            "phase_seq": 0,
-            "phase": None,
-            "phase_id": None,
-            "phase_started_monotonic": None,
+            "phase": "active",
+            "phase_started_monotonic": time.monotonic(),
+            "phase_ms": {},
         }
-        self._timing_turns[turn_number] = state
-        try:
-            self._start_phase(state, "active")
-        except Exception:
-            try:
-                getattr(self._store, "delay_run_finish")(run_id, 0, now=_utc_now(), outcome="aborted")
-            finally:
-                self._timing_turns.pop(turn_number, None)
-            raise
 
     def on_turn_progress(self, turn_number: int, **kwargs: Any) -> None:
         state = self._timing_turns.get(turn_number)
         phase = str(kwargs.get("phase") or "")
         if state is None or phase not in _TIMING_PHASES or phase == state.get("phase"):
             return
-        self._finish_phase(state)
-        self._start_phase(state, phase, int(kwargs.get("iteration") or 0))
+        self._close_phase(state)
+        state.update(phase=phase, phase_started_monotonic=time.monotonic())
 
     def on_turn_finish(self, turn_number: int, **kwargs: Any) -> None:
-        state = self._timing_turns.get(turn_number)
+        state = self._timing_turns.pop(turn_number, None)
         if state is None or self._store is None:
             return
         outcome = _OUTCOME_MAP.get(str(kwargs.get("outcome") or "incomplete"), "incomplete")
-        self._finish_phase(state, "completed" if outcome == "completed" else outcome)
-        elapsed_ms = max(0, int((time.monotonic() - state["started_monotonic"]) * 1000))
-        getattr(self._store, "delay_run_finish")(state["run_id"], elapsed_ms, now=_utc_now(), outcome=outcome)
-        self._timing_turns.pop(turn_number, None)
+        self._close_phase(state)
+        self._enqueue_turn(
+            {
+                "run_id": state["run_id"],
+                "cohort": state["cohort"],
+                "started_at": state["started_at"],
+                "finished_at": _utc_now(),
+                "elapsed_ms": max(0, int((time.monotonic() - state["started_monotonic"]) * 1000)),
+                "phase_ms": dict(state["phase_ms"]),
+                "outcome": outcome,
+                "phase_outcome": "completed" if outcome == "completed" else outcome,
+            }
+        )
 
     def estimate_turn(self, **kwargs: Any) -> Optional[Dict[str, Any]]:
         if self._store is None:
@@ -382,7 +424,8 @@ class MemKraftMemoryProvider(MemoryProvider):
                     subject="general",
                 )
                 self.on_turn_finish(turn, outcome="aborted")
-                report["smoke"] = {"timing_round_trip": turn not in self._timing_turns}
+                drained = self.flush_timing(timeout=30)
+                report["smoke"] = {"timing_round_trip": drained and turn not in self._timing_turns}
             except Exception as exc:
                 report["ready"] = False
                 report["smoke"] = {
@@ -609,6 +652,11 @@ class MemKraftMemoryProvider(MemoryProvider):
         if reset or rewound:
             self.abort_open_turns()
         self._session_id = new_session_id
+
+    def shutdown(self) -> None:
+        """Close open turns and give queued timing writes a bounded drain."""
+        self.abort_open_turns()
+        self.flush_timing(timeout=float(os.environ.get("MEMKRAFT_TIMING_DRAIN_S", "10")))
 
     def backup_paths(self) -> List[str]:
         configured = os.environ.get("MEMKRAFT_DIR")

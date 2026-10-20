@@ -1,5 +1,5 @@
-**v4.4.1**
-Current version: **4.4.1**
+**v4.4.2**
+Current version: **4.4.2**
 
 <div align="center">
 
@@ -515,7 +515,7 @@ The full threat model is in [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
 
 ## Versioning and upgrades
 
-Current version: **4.4.1**.
+Current version: **4.4.2**.
 
 ```bash
 pipx upgrade memkraft
@@ -525,7 +525,7 @@ pip install --upgrade memkraft
 memkraft --version
 ```
 
-Upgrading from 4.4.0 to 4.4.1 requires no migration; set `MEMKRAFT_HERMES_LESSON_MIN_SCORE=0` to inject every recalled lesson again. Upgrading from 4.3.1 to 4.4.0 requires no migration; chat-sourced auto extraction is gated by default (`MEMKRAFT_WRITE_GATE=preview|off` restores the old writes) and `memkraft gate-archive` is opt-in. Upgrading from 4.3.0 to 4.3.1 requires no migration; `MEMKRAFT_OWNER_DIR` now also applies to plain `MemKraft(base_dir=...)` stores. Upgrading from 4.2.x to 4.3.0 requires no migration command or Markdown rewrite. Curated lessons are ordinary ReasoningBank trajectories tagged `curated-lesson`; older versions read them as plain failure lessons.
+Upgrading from 4.4.1 to 4.4.2 requires no migration. Upgrading from 4.4.0 to 4.4.1 requires no migration; set `MEMKRAFT_HERMES_LESSON_MIN_SCORE=0` to inject every recalled lesson again. Upgrading from 4.3.1 to 4.4.0 requires no migration; chat-sourced auto extraction is gated by default (`MEMKRAFT_WRITE_GATE=preview|off` restores the old writes) and `memkraft gate-archive` is opt-in. Upgrading from 4.3.0 to 4.3.1 requires no migration; `MEMKRAFT_OWNER_DIR` now also applies to plain `MemKraft(base_dir=...)` stores. Upgrading from 4.2.x to 4.3.0 requires no migration command or Markdown rewrite. Curated lessons are ordinary ReasoningBank trajectories tagged `curated-lesson`; older versions read them as plain failure lessons.
 
 Upgrading from 4.2.x to 4.2.2 requires no migration command or Markdown rewrite. The first search writes a disposable token cache to `.memkraft/index/`; deleting it is always safe, and `MEMKRAFT_INDEX_CACHE=off` disables it.
 
@@ -533,7 +533,11 @@ Upgrading from 3.4.1 to 3.5.0 requires no migration command or Markdown rewrite.
 
 ## 📝 Changelog
 
-### [v4.4.1](https://github.com/seojoonkim/memkraft/releases/tag/v4.4.1) (current)
+### [v4.4.2](https://github.com/seojoonkim/memkraft/releases/tag/v4.4.2) (current)
+
+Hermes turn timing no longer blocks each tool step. See [release notes](docs/releases/4.4.2.md).
+
+### [v4.4.1](https://github.com/seojoonkim/memkraft/releases/tag/v4.4.1)
 
 Hermes recall drops lessons below a 0.03 relevance floor. See [release notes](docs/releases/4.4.1.md).
 

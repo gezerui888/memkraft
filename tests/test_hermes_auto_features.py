@@ -49,6 +49,7 @@ def test_completed_turns_train_eta_without_raw_prompt_or_session_id(tmp_path):
         provider.on_turn_progress(turn, phase="active", iteration=turn)
         provider.on_turn_finish(turn, outcome="completed")
 
+    assert provider.flush_timing(timeout=30)
     estimate = provider.estimate_turn(platform="telegram", subject="development")
     assert estimate is not None
     assert estimate["sample_count"] == 5
@@ -70,6 +71,7 @@ def test_failed_and_interrupted_turns_do_not_train_eta(tmp_path):
         provider._timing_turns[turn]["started_monotonic"] -= turn
         provider.on_turn_finish(turn, outcome=outcome)
 
+    assert provider.flush_timing(timeout=30)
     assert provider.estimate_turn(platform="telegram", subject="research") is None
 
 

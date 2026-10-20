@@ -614,7 +614,7 @@
     }
   ],
   "release": {
-    "active_branch": "release/4.4.1",
+    "active_branch": "release/4.4.2",
     "base_sha": "d35332d5d356de640d14593cd8f0af89709fa195",
     "release_paths": [
       ".github/workflows/gym-gate.yml",
@@ -677,6 +677,7 @@
       "docs/releases/4.3.1.md",
       "docs/releases/4.4.0.md",
       "docs/releases/4.4.1.md",
+      "docs/releases/4.4.2.md",
       "examples/execution_graph_adapter.py",
       "go.work",
       "pyproject.toml",
@@ -769,6 +770,7 @@
       "tests/test_store_core.py",
       "tests/test_store_core_lock_nb.py",
       "tests/test_store_core_torn_tail.py",
+      "tests/test_timing_hot_path.py",
       "tests/test_touch_last_accessed.py",
       "tests/test_v081_doctor.py",
       "tests/test_v081_mcp.py",
@@ -783,7 +785,7 @@
     "remote": "origin",
     "removed_paths": [],
     "state": "verified",
-    "version": "4.4.1"
+    "version": "4.4.2"
   },
   "schema": 2
 }
