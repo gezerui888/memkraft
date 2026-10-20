@@ -437,6 +437,7 @@ class DevelopmentExperienceMixin:
         k: int = 3,
         max_chars: int = 1400,
         style: str = "compact",
+        min_score: float = 0.0,
     ) -> str:
         """Return bounded failure/success guidance for a similar new task."""
 
@@ -445,6 +446,7 @@ class DevelopmentExperienceMixin:
             k=k,
             max_chars=max_chars,
             style=style,
+            min_score=min_score,
         )
 
 

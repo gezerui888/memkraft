@@ -612,7 +612,7 @@
     }
   ],
   "release": {
-    "active_branch": "release/4.4.0",
+    "active_branch": "release/4.4.1",
     "base_sha": "d35332d5d356de640d14593cd8f0af89709fa195",
     "release_paths": [
       ".github/workflows/gym-gate.yml",
@@ -674,6 +674,7 @@
       "docs/releases/4.3.0.md",
       "docs/releases/4.3.1.md",
       "docs/releases/4.4.0.md",
+      "docs/releases/4.4.1.md",
       "examples/execution_graph_adapter.py",
       "go.work",
       "pyproject.toml",
@@ -740,6 +741,7 @@
       "tests/test_integrations.py",
       "tests/test_korean_chat_entity_noise.py",
       "tests/test_lesson_action_first.py",
+      "tests/test_lesson_min_score.py",
       "tests/test_memory_graph_release.py",
       "tests/test_memory_graph_schema.py",
       "tests/test_owner_dir_shared.py",
@@ -779,7 +781,7 @@
     "remote": "origin",
     "removed_paths": [],
     "state": "verified",
-    "version": "4.4.0"
+    "version": "4.4.1"
   },
   "schema": 2
 }

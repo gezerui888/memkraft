@@ -68,6 +68,19 @@ def _development_experience_enabled() -> bool:
     return os.environ.get("MEMKRAFT_HERMES_DEV_EXPERIENCE", "on").strip().lower() not in _FALSE_VALUES
 
 
+# Lessons scoring below this are matched only by one shared particle or by a
+# quoted reply prefix; on a live store every hit under 0.03 was unrelated.
+_DEFAULT_LESSON_MIN_SCORE = 0.03
+
+
+def _lesson_min_score() -> float:
+    raw = os.environ.get("MEMKRAFT_HERMES_LESSON_MIN_SCORE", "")
+    try:
+        return max(0.0, float(raw)) if raw.strip() else _DEFAULT_LESSON_MIN_SCORE
+    except ValueError:
+        return _DEFAULT_LESSON_MIN_SCORE
+
+
 def _utf8_prefix(payload: bytes, byte_limit: int) -> tuple[bytes, bytes]:
     """Split one UTF-8-safe prefix, or return empty when no code point fits."""
     end = min(len(payload), byte_limit)
@@ -384,7 +397,7 @@ class MemKraftMemoryProvider(MemoryProvider):
         with redirect_stdout(io.StringIO()):
             results = self._recall_hits(query, want=5)
             reasoning = (
-                self._store.development_inject_for_task(query, style="full")
+                self._store.development_inject_for_task(query, style="full", min_score=_lesson_min_score())
                 if _development_experience_enabled()
                 else ""
             )
