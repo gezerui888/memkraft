@@ -9,7 +9,8 @@
         "d7fc0f1dc4e718dcc332976962a57ed9039a26ec",
         "053792e599a5420e90a284985bce51aa9aaedd85",
         "76792573c1fe215c033a2ced7c0d8f8baacc79c0",
-        "ace5046d71e159dd33cdbe133556e8b0431155e7"
+        "ace5046d71e159dd33cdbe133556e8b0431155e7",
+        "c466537ea4e6bc1cd0442c021ada684156d810d2"
       ],
       "evaluation_refs": [
         {
@@ -98,7 +99,8 @@
       "commits": [
         "09c638cdd0f9d0a40a0cf228a4bbd5cafe57e998",
         "d19cce2b43717d6c1499a2a96afc7ec2dfd1f3b5",
-        "a0fd7b630e1bcc902bb75e526e6ab3b58b18e1f5"
+        "a0fd7b630e1bcc902bb75e526e6ab3b58b18e1f5",
+        "c466537ea4e6bc1cd0442c021ada684156d810d2"
       ],
       "evaluation_refs": [
         {
@@ -157,7 +159,8 @@
         "1fbee4d6b2bd5a0d51965eb7f674d83bc042816c",
         "1219f28cc1aa69a68d061afbb7d713c92d922162",
         "b2de21c7b5a4e9fe1e086e216c1c06f4feff9e0c",
-        "ace5046d71e159dd33cdbe133556e8b0431155e7"
+        "ace5046d71e159dd33cdbe133556e8b0431155e7",
+        "c466537ea4e6bc1cd0442c021ada684156d810d2"
       ],
       "evaluation_refs": [
         {
@@ -578,6 +581,32 @@
       "revision_id": "r1",
       "source_paths": [
         "src/memkraft/decay.py"
+      ],
+      "state": "verified"
+    },
+    {
+      "commits": [
+        "c466537ea4e6bc1cd0442c021ada684156d810d2"
+      ],
+      "evaluation_refs": [
+        {
+          "kind": "pytest",
+          "node": "all",
+          "path": "tests/test_write_gate.py"
+        }
+      ],
+      "id": "feature.chat-extraction-write-gate-4.4.0",
+      "promotion_evidence": [
+        {
+          "claim": "rule-based write gate for chat-sourced auto extraction",
+          "kind": "release-note",
+          "path": "docs/releases/4.4.0.md"
+        }
+      ],
+      "proposal_id": "prop.chat-extraction-write-gate-4.4.0",
+      "revision_id": "r1",
+      "source_paths": [
+        "src/memkraft/write_gate.py"
       ],
       "state": "verified"
     }
