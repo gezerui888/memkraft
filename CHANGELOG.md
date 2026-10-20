@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [4.4.1] — 2026-10-20
+
+- Hermes recall skips injected ReasoningBank lessons scoring below 0.03 (`MEMKRAFT_HERMES_LESSON_MIN_SCORE`, `0` restores the old behaviour). `development_inject_for_task()` accepts `min_score`; its library default stays 0.0.
+
 ## [4.4.0] — 2026-10-20
 
 - Write gate for automatic chat extraction (`MEMKRAFT_WRITE_GATE=enforce|preview|off`, default `enforce`). Turns extracted from `hermes:` sources no longer create template-only entity pages, re-touch unenriched templates, or append subject-less numbers to `fact-registry.md`; rejected items are logged as `proposed` in `.memkraft/write-gate.jsonl`. Explicit sources are unchanged.
