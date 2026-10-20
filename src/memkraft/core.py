@@ -892,6 +892,32 @@ class MemKraft:
         registry_facts = self._extract_registry_facts(text)
         results = []
 
+        from . import write_gate as _wg
+        gate = _wg.gate_mode()
+        if gate != "off" and _wg.is_chat_source(resolved_source):
+            dirs = (self.live_notes_dir, self.entities_dir)
+            rejected: List[Dict[str, Any]] = []
+
+            def _keep(kind, name, verdict):
+                ok, reason = verdict
+                if not ok:
+                    rejected.append({"kind": kind, "name": name, "reason": reason,
+                                     "source": resolved_source})
+                return ok or gate == "preview"
+
+            entities = [e for e in entities if _keep(
+                "entity", e["name"],
+                _wg.judge_entity(self._slugify(e["name"]), resolved_source, dirs, self._safe_read))]
+            facts = [f for f in facts if _keep(
+                "fact", f"{f['entity']}: {f['fact']}",
+                _wg.judge_fact(self._slugify(f["entity"]), resolved_source, dirs, self._safe_read))]
+            registry_facts = [r for r in registry_facts if _keep(
+                "registry", r, _wg.judge_registry(r, resolved_source))]
+            if not dry_run:
+                _wg.log_decisions(self.base_dir, [dict(r, mode=gate) for r in rejected])
+            if rejected:
+                results.append({"type": "write-gate", "mode": gate, "rejected": len(rejected)})
+
         for e in entities:
             e["source"] = resolved_source
             if dry_run:

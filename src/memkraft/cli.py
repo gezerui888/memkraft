@@ -218,6 +218,11 @@ def main(argv=None):
     dedup_parser = subparsers.add_parser("dedup", help="Find and merge duplicate facts")
     dedup_parser.add_argument("--dry-run", action="store_true", help="Preview without changes")
 
+    # write-gate archive / restore
+    wg_parser = subparsers.add_parser("gate-archive", help="Move template-only auto-extracted entity pages to a reversible archive")
+    wg_parser.add_argument("--apply", action="store_true", help="Actually move files (default: count only)")
+    wg_parser.add_argument("--restore", default="", help="Restore an archive batch id")
+
     # summarize
     summarize_parser = subparsers.add_parser("summarize", help="Auto-summarize entity pages")
     summarize_parser.add_argument("name", nargs="?", default=None, help="Entity name (default: all bloated pages)")
@@ -646,6 +651,14 @@ def main(argv=None):
         mc.decay(days=args.days, dry_run=args.dry_run)
     elif args.command == "dedup":
         mc.dedup(dry_run=args.dry_run)
+    elif args.command == "gate-archive":
+        from . import write_gate as _wg
+        if args.restore:
+            out = _wg.restore_archive(mc.base_dir, args.restore)
+        else:
+            out = _wg.archive_noise_entities(mc.base_dir, mc.entities_dir, apply=args.apply,
+                                             read=mc._safe_read)
+        print(json.dumps(out, ensure_ascii=False, sort_keys=True))
     elif args.command == "summarize":
         mc.summarize(name=args.name, max_length=args.max_length)
     elif args.command == "agentic-search":
