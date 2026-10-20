@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [4.4.0] — 2026-10-20
+
+- Write gate for automatic chat extraction (`MEMKRAFT_WRITE_GATE=enforce|preview|off`, default `enforce`). Turns extracted from `hermes:` sources no longer create template-only entity pages, re-touch unenriched templates, or append subject-less numbers to `fact-registry.md`; rejected items are logged as `proposed` in `.memkraft/write-gate.jsonl`. Explicit sources are unchanged.
+- `memkraft gate-archive [--apply] [--restore BATCH]` moves existing template-only entity pages into a reversible archive with a manifest.
+
 ## [4.3.1] — 2026-10-15
 
 - Owner sayings: `MemKraft(base_dir=...)` now honours `MEMKRAFT_OWNER_DIR` like the Hermes provider, so scripts and cron jobs read and write the shared owner ledger instead of a private `<base_dir>/owner` copy. An explicit `owner_dir` still wins; without the env var nothing changes.
