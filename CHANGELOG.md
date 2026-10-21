@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [4.4.3] — 2026-10-21
+
+- Hermes recall drops repeated copies of the same turn (artifact + live-note chunk) and cron scheduler preambles from the top-5 candidates, widening the search window until five distinct hits are found; cron preambles are used only when nothing else matches.
+
 ## [4.4.2] — 2026-10-20
 
 - Hermes turn timing is accumulated in memory and written once per turn by a background thread, instead of one full-ledger read/fold/fsync per phase change on the turn's thread (about 9 s per tool step on a 64 MB ledger). Provider close drains pending writes; `flush_timing(timeout)` waits for them.

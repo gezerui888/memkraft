@@ -12,6 +12,7 @@ import io
 import json
 import logging
 import os
+import re
 import threading
 import time
 from contextlib import contextmanager, redirect_stdout
@@ -167,6 +168,56 @@ def _owner_tool_schemas() -> List[Dict[str, Any]]:
          "parameters": obj({"decision_id": s, "answer": s, "resolved_by": s},
                            ["decision_id", "answer", "resolved_by"])},
     ]
+
+
+_CRON_BOILERPLATE_MARKERS = (
+    "you are running as a scheduled cron job",
+    "[silent]\" (nothing else) to suppress delivery",
+)
+_SPEAKER_PREFIX = re.compile(r"^\s*(?:\{\"content\":\s*\")?(?:user|assistant|output)\s*:\s*", re.IGNORECASE)
+
+
+def _recall_snippet(hit: Dict[str, Any]) -> str:
+    return str(hit.get("snippet") or hit.get("match") or "")
+
+
+def _is_cron_boilerplate(text: str) -> bool:
+    lowered = text.lower()
+    return any(marker in lowered for marker in _CRON_BOILERPLATE_MARKERS)
+
+
+def _dedup_key(text: str) -> str:
+    """Key that collapses the same turn stored as artifact + live-note chunk."""
+    body = _SPEAKER_PREFIX.sub("", text.replace("\\n", " "))
+    body = re.sub(r"[\s|*#>`\"\\-]+", " ", body).strip().lower()
+    return body[:80]
+
+
+def _diversify_hits(hits: List[Dict[str, Any]], keep_boilerplate: bool = False) -> List[Dict[str, Any]]:
+    """Drop repeated copies and cron-instruction echoes from recall candidates.
+
+    The same completed turn is persisted as an artifact and a live-note chunk,
+    and every cron run re-stores the identical scheduler preamble, so without
+    this the top-5 recall slots are often five copies of one thing.
+    Order (relevance) is preserved; the first copy wins.
+    """
+    seen = set()
+    kept: List[Dict[str, Any]] = []
+    boilerplate: List[Dict[str, Any]] = []
+    for hit in hits or []:
+        text = _recall_snippet(hit)
+        key = _dedup_key(text)
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        if _is_cron_boilerplate(text):
+            boilerplate.append(hit)
+            continue
+        kept.append(hit)
+    if keep_boilerplate:
+        kept.extend(boilerplate)
+    return kept
 
 
 class MemKraftMemoryProvider(MemoryProvider):
@@ -473,13 +524,13 @@ class MemKraftMemoryProvider(MemoryProvider):
         seen_total = -1
         for window in self._RECALL_WINDOWS:
             raw = self._store.search(query, top_k=window)
-            filtered = self._filter_stub_hits(raw, keep_demoted=False)
+            filtered = _diversify_hits(self._filter_stub_hits(raw, keep_demoted=False))
             if len(filtered) >= want or len(raw) < window or len(raw) == seen_total:
                 break
             seen_total = len(raw)
         if filtered:
             return filtered[:want]
-        return self._filter_stub_hits(raw)[:want]
+        return _diversify_hits(self._filter_stub_hits(raw), keep_boilerplate=True)[:want]
 
     def _filter_stub_hits(self, results: List[Dict[str, Any]], keep_demoted: bool = True) -> List[Dict[str, Any]]:
         """Drop entity pages that only record detections, so facts reach the top slots."""
