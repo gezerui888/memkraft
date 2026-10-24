@@ -134,6 +134,7 @@ OWNER_TOOL_NAMES = (
     "owner_decision_enqueue",
     "owner_decision_list",
     "owner_decision_resolve",
+    "owner_saying_classify",
 )
 
 
@@ -167,6 +168,14 @@ def _owner_tool_schemas() -> List[Dict[str, Any]]:
          "description": "Record the owner's answer to a queued decision.",
          "parameters": obj({"decision_id": s, "answer": s, "resolved_by": s},
                            ["decision_id", "answer", "resolved_by"])},
+        {"name": "owner_saying_classify",
+         "description": ("Record what enforces an owner saying: code/config/check (list the enforcing "
+                         "file paths in by), prose (standing rule that exists only as text), or oneoff. "
+                         "When the owner corrects you, check the saying's enforcement first; a prose "
+                         "rule that was violated is a gap to turn into code."),
+         "parameters": obj({"saying_id": s,
+                            "level": {"type": "string", "enum": ["code", "config", "check", "prose", "oneoff"]},
+                            "by": {"type": "array", "items": s}, "note": s}, ["saying_id", "level"])},
     ]
 
 
@@ -684,6 +693,9 @@ class MemKraftMemoryProvider(MemoryProvider):
                 status = a.get("status") or "open"
                 out = {"results": mk.decision_list(status=status),
                        "digest": mk.decision_digest() if status == "open" else ""}
+            elif tool_name == "owner_saying_classify":
+                out = mk.saying_classify(a.get("saying_id", ""), a.get("level", ""),
+                                         by=a.get("by") or (), note=a.get("note") or "")
             else:
                 out = mk.decision_resolve(a.get("decision_id", ""), a.get("answer", ""),
                                           resolved_by=a.get("resolved_by", ""))

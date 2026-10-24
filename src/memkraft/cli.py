@@ -187,6 +187,14 @@ def main(argv=None):
     orc.add_argument("--source", default="")
     owner_sub.add_parser("decisions", help="Print the open decision digest")
     owner_sub.add_parser("where", help="Print the owner ledger directory")
+    ocl = owner_sub.add_parser("classify", help="Record what enforces a saying")
+    ocl.add_argument("saying_id")
+    ocl.add_argument("level", choices=["code", "config", "check", "prose", "oneoff"])
+    ocl.add_argument("--by", action="append", default=[], help="enforcing file path (repeatable)")
+    ocl.add_argument("--note", default="")
+    oen = owner_sub.add_parser("enforcement", help="Report unclassified sayings and vanished enforcers")
+    oen.add_argument("--root", default=None, help="base dir for relative --by paths")
+    oen.add_argument("--json", action="store_true")
 
     # retro
     retro_parser = subparsers.add_parser("retro", help="Daily retrospective")
@@ -633,6 +641,23 @@ def main(argv=None):
                                                source=args.source), ensure_ascii=False))
         elif args.owner_cmd == "decisions":
             print(mc.decision_digest() or "(no open decisions)")
+        elif args.owner_cmd == "classify":
+            print(_json.dumps(mc.saying_classify(args.saying_id, args.level, by=args.by,
+                                                 note=args.note), ensure_ascii=False))
+        elif args.owner_cmd == "enforcement":
+            rep = mc.saying_enforcement_report(root=args.root)
+            if args.json:
+                print(_json.dumps(rep, ensure_ascii=False))
+            else:
+                print("total={} levels={} unclassified={} broken={} prose={}".format(
+                    rep["total"], rep["levels"], len(rep["unclassified"]), len(rep["broken"]),
+                    len(rep["prose"])))
+                for sid in rep["unclassified"]:
+                    print("UNCLASSIFIED", sid)
+                for b in rep["broken"]:
+                    print("BROKEN {}:{}".format(b["id"], b["path"]))
+            if not rep["ok"]:
+                sys.exit(1)
         else:
             print(mc.owner_dir)
     elif args.command == "retro":

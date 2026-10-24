@@ -21,11 +21,14 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from .store_core import append
 
-__all__ = ["OwnerLedgerMixin", "OwnerLedgerError", "IRREVERSIBLE_CATEGORIES"]
+__all__ = ["OwnerLedgerMixin", "OwnerLedgerError", "IRREVERSIBLE_CATEGORIES",
+           "ENFORCEMENT_LEVELS", "ENFORCED_LEVELS"]
 
 IRREVERSIBLE_CATEGORIES = frozenset({
     "money", "delete", "publish", "account", "credential", "legal", "external_contract",
 })
+ENFORCED_LEVELS = frozenset({"code", "config", "check"})
+ENFORCEMENT_LEVELS = ENFORCED_LEVELS | {"prose", "oneoff"}
 _MAX_TEXT = 4000
 _TOKEN = re.compile(r"[0-9A-Za-z\uac00-\ud7a3]+")
 
@@ -172,10 +175,85 @@ class OwnerLedgerMixin:
             if overlap:
                 scored.append((overlap / (len(q) ** 0.5 * max(len(tok), 1) ** 0.5), row))
         scored.sort(key=lambda item: (-item[0], item[1].get("said_at", "")))
+        enf = self._enforcement()
         return [{"id": r["saying_id"], "text": r["text"], "scope": r["scope"],
                  "tags": r.get("tags", []), "source": r.get("source", ""),
-                 "said_at": r.get("said_at", ""), "score": round(s, 3)}
+                 "said_at": r.get("said_at", ""), "score": round(s, 3),
+                 "enforcement": (enf.get(r["saying_id"]) or {}).get("level", "unclassified")}
                 for s, r in scored[:max(1, int(limit))]]
+
+    # -- enforcement map ---------------------------------------------------
+    # A saying is only as good as what makes it hold.  Each live saying gets a
+    # level: code/config/check (a concrete file enforces it), prose (standing rule
+    # that exists only as text) or oneoff (single task or fact).  Latest row wins;
+    # rows live in their own file so sayings.jsonl stays verbatim-only.
+    def _enforcement(self) -> Dict[str, Dict[str, Any]]:
+        out: Dict[str, Dict[str, Any]] = {}
+        for row in _read(self.owner_dir / "enforcement.jsonl"):
+            sid = row.get("saying_id")
+            if row.get("kind") == "saying_enforcement" and sid:
+                out[sid] = row
+        return out
+
+    def saying_classify(self, saying_id: str, level: str, *, by: Iterable[str] = (),
+                        note: str = "") -> Dict[str, Any]:
+        level = _clean("level", level, 16).lower()
+        if level not in ENFORCEMENT_LEVELS:
+            raise OwnerLedgerError("level must be one of " + ", ".join(sorted(ENFORCEMENT_LEVELS)))
+        if saying_id not in self._sayings():
+            raise OwnerLedgerError("unknown saying id")
+        paths = sorted({_norm(p) for p in by if _norm(p)})
+        if level in ENFORCED_LEVELS and not paths:
+            raise OwnerLedgerError("{} level needs at least one enforcing path in by".format(level))
+        note = _norm(note)[:500]
+        current = self._enforcement().get(saying_id)
+        if current and current.get("level") == level and current.get("by") == paths \
+                and current.get("note", "") == note:
+            return {"id": saying_id, "level": level, "changed": False}
+        append(self.owner_dir / "enforcement.jsonl", {
+            "kind": "saying_enforcement", "saying_id": saying_id, "level": level,
+            "by": paths, "note": note, "classified_at": _now(),
+        })
+        return {"id": saying_id, "level": level, "changed": True}
+
+    def saying_enforcement(self, saying_id: str) -> Optional[Dict[str, Any]]:
+        row = self._enforcement().get(saying_id)
+        if not row:
+            return None
+        return {"level": row.get("level"), "by": list(row.get("by") or []), "note": row.get("note", "")}
+
+    def saying_enforcement_report(self, root: Optional[Any] = None) -> Dict[str, Any]:
+        """Which live sayings are unclassified, and which enforcing paths vanished.
+
+        ``root`` resolves relative ``by`` paths; when omitted paths are not checked.
+        Returns ids only (never saying text) so the report is safe to log.
+        """
+        sayings = {k: v for k, v in self._sayings().items() if not v.get("retired")}
+        enf = self._enforcement()
+        levels: Dict[str, int] = {}
+        unclassified: List[str] = []
+        broken: List[Dict[str, str]] = []
+        prose_rules: List[str] = []
+        base = Path(root).expanduser() if root else None
+        for sid in sorted(sayings):
+            row = enf.get(sid)
+            if not row:
+                unclassified.append(sid)
+                continue
+            lv = row.get("level", "")
+            levels[lv] = levels.get(lv, 0) + 1
+            if lv == "prose":
+                prose_rules.append(sid)
+            if base is not None and lv in ENFORCED_LEVELS:
+                for p in row.get("by") or []:
+                    target = Path(p).expanduser()
+                    if not target.is_absolute():
+                        target = base / target
+                    if not target.exists():
+                        broken.append({"id": sid, "path": p})
+        return {"total": len(sayings), "levels": dict(sorted(levels.items())),
+                "unclassified": unclassified, "broken": broken, "prose": prose_rules,
+                "ok": not unclassified and not broken}
 
     # -- decision queue ----------------------------------------------------
     def _decisions(self) -> Dict[str, Dict[str, Any]]:

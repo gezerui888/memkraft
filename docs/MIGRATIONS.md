@@ -25,6 +25,7 @@
 | 3.2.x | 3.3.0 | no (additive/read-compatible execution Preview) | schema rewrite 없음; first execution apply lazily creates `.memkraft/execution/events.jsonl` | 3.2.x 재설치; 새 execution 파일은 이전 버전이 무시 | none; execution audit log retained |
 | 4.2.2 | 4.3.0 | no (additive) | 없음; curated lesson은 `curated-lesson` 태그가 붙은 기존 ReasoningBank trajectory | 4.2.2 재설치; 이전 버전은 일반 failure lesson으로 읽음 | none; Markdown과 JSONL 형식 변경 없음 |
 | 4.4.2 | 4.4.3 | no | 없음; Hermes recall 중복·크론 안내문 제외 | 4.4.2 재설치 | none; 저장 형식 변경 없음 |
+| 4.4.3 | 4.5.0 | no | 없음; owner 지시 강제수준 분류 추가(기존 지시는 미분류로 시작) | 4.4.3 재설치, `enforcement.jsonl` 무시됨 | 새 파일 `enforcement.jsonl`; 기존 파일 변경 없음 |
 | 4.4.1 | 4.4.2 | no | 없음; Hermes timing 기록이 턴 종료 후 한 번에 기록됨 | 4.4.1 재설치 | none; JSONL 형식 변경 없음 |
 | 4.4.0 | 4.4.1 | no | 없음; Hermes recall이 점수 0.03 미만 교훈을 주입하지 않음 | `MEMKRAFT_HERMES_LESSON_MIN_SCORE=0` 또는 4.4.0 재설치 | none |
 | 4.3.1 | 4.4.0 | no (additive, default-on gate) | 없음; `hermes:` 출처 자동 추출만 쓰기 전 거름; `MEMKRAFT_WRITE_GATE=off`로 이전 동작 | 4.3.1 재설치; `memkraft gate-archive --restore <batch>`로 보관 페이지 복원 | none; Markdown과 JSONL 형식 변경 없음 |
