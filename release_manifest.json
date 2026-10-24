@@ -11,7 +11,8 @@
         "76792573c1fe215c033a2ced7c0d8f8baacc79c0",
         "ace5046d71e159dd33cdbe133556e8b0431155e7",
         "ac44aba2799c0c404d7c3b1d76044cd6aadcc03b",
-        "99dd9263de230b1600aa6bb76beadbffd98e265b"
+        "99dd9263de230b1600aa6bb76beadbffd98e265b",
+        "c9fc54f6a2eac36566b9d2ddd1e2c71442e281ad"
       ],
       "evaluation_refs": [
         {
@@ -161,7 +162,8 @@
         "1219f28cc1aa69a68d061afbb7d713c92d922162",
         "b2de21c7b5a4e9fe1e086e216c1c06f4feff9e0c",
         "ace5046d71e159dd33cdbe133556e8b0431155e7",
-        "ac44aba2799c0c404d7c3b1d76044cd6aadcc03b"
+        "ac44aba2799c0c404d7c3b1d76044cd6aadcc03b",
+        "c9fc54f6a2eac36566b9d2ddd1e2c71442e281ad"
       ],
       "evaluation_refs": [
         {
@@ -424,7 +426,8 @@
       "state": "verified",
       "commits": [
         "76792573c1fe215c033a2ced7c0d8f8baacc79c0",
-        "ace5046d71e159dd33cdbe133556e8b0431155e7"
+        "ace5046d71e159dd33cdbe133556e8b0431155e7",
+        "c9fc54f6a2eac36566b9d2ddd1e2c71442e281ad"
       ],
       "source_paths": [
         "src/memkraft/owner_ledger.py"
@@ -444,6 +447,11 @@
           "kind": "pytest",
           "node": "all",
           "path": "tests/test_hermes_agent_compat.py"
+        },
+        {
+          "kind": "pytest",
+          "node": "all",
+          "path": "tests/test_owner_enforcement.py"
         }
       ],
       "promotion_evidence": [
@@ -451,6 +459,11 @@
           "kind": "release-note",
           "path": "docs/releases/4.2.0.md",
           "claim": "Owner sayings"
+        },
+        {
+          "kind": "release-note",
+          "path": "docs/releases/4.5.0.md",
+          "claim": "MemKraft 4.5.0"
         }
       ]
     },
