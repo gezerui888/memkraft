@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [4.5.0] — 2026-10-24
+
+- Owner sayings carry an enforcement level: `saying_classify(id, level, by=paths)` with `code|config|check` (a concrete file enforces the rule), `prose` (exists only as text) or `oneoff`. Rows go to `<owner_dir>/enforcement.jsonl`; `sayings.jsonl` stays verbatim-only.
+- `saying_enforcement_report(root=)` lists unclassified live sayings, enforcing paths that no longer exist and prose-only rules (ids only, never saying text). `saying_search` results include `enforcement`.
+- CLI: `memkraft owner classify` and `memkraft owner enforcement` (exit 1 when anything is unclassified or broken). Hermes tool `owner_saying_classify`.
+
 ## [4.4.3] — 2026-10-21
 
 - Hermes recall drops repeated copies of the same turn (artifact + live-note chunk) and cron scheduler preambles from the top-5 candidates, widening the search window until five distinct hits are found; cron preambles are used only when nothing else matches.
