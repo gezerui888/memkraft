@@ -248,7 +248,8 @@
         "99dd9263de230b1600aa6bb76beadbffd98e265b",
         "711f442e2db5f814d498772d0b90c76ec017a687",
         "74ed84faab0eb818448ca8ca4c38bb905f373276",
-        "fd16d6d77fd59219fbfaea0b3fef580eba4aa243"
+        "fd16d6d77fd59219fbfaea0b3fef580eba4aa243",
+        "1413dc8cf9836fb0b77045bfa364931e4067eb28"
       ],
       "evaluation_refs": [
         {
@@ -768,6 +769,7 @@
       "tests/test_memory_graph_schema.py",
       "tests/test_owner_dir_shared.py",
       "tests/test_owner_ledger.py",
+      "tests/test_owner_saying_profile_scope.py",
       "tests/test_packaging_version.py",
       "tests/test_persistent_corpus_index.py",
       "tests/test_project_memory_api.py",
