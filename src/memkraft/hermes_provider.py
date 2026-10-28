@@ -299,6 +299,15 @@ class MemKraftMemoryProvider(MemoryProvider):
             parts = hermes_home.parts
             owner_root = Path(*parts[:-2]) if len(parts) > 2 and parts[-2] == "profiles" else hermes_home
         self._store.owner_dir = os.environ.get("MEMKRAFT_OWNER_DIR") or str(owner_root / "memkraft-owner")
+        # Sayings are shared, but each one is addressed to one profile (or
+        # "all").  Auto-injection must only surface this profile's sayings plus
+        # "all"; on 2026-10 live turns 204/288 injected blocks carried another
+        # sibling's directive.  ``owner_saying_search`` keeps its explicit scope.
+        hp = hermes_home.parts
+        self._owner_scope = (
+            os.environ.get("MEMKRAFT_OWNER_SCOPE")
+            or (hp[-1] if len(hp) > 2 and hp[-2] == "profiles" else "default")
+        ).strip().lower()
         self._session_id = session_id
 
     def system_prompt_block(self) -> str:
@@ -515,7 +524,8 @@ class MemKraftMemoryProvider(MemoryProvider):
         recall = "\n".join(lines) if len(lines) > 1 else ""
         sayings = ""
         try:
-            hits = self._store.saying_search(query, limit=2)
+            hits = self._store.saying_search(
+                query, limit=2, scope=getattr(self, "_owner_scope", None))
         except Exception:
             hits = []
         if hits:
